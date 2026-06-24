@@ -9,24 +9,21 @@ from PySide6.QtWidgets import (QApplication, QComboBox, QLabel, QMainWindow,
                              QWidget, QMessageBox, QVBoxLayout, QHBoxLayout, QSpacerItem, QSizePolicy)
 from PySide6.QtSerialPort import QSerialPortInfo
 
-# --- ARAYÜZ KODU (Değişiklik yapılmadı, sadece referans için burada) ---
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(850, 600) # Başlangıç boyutunu biraz artırdım
+        MainWindow.resize(850, 600) 
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
-        
-        # Tasarımdaki toolları tanımlıyoruz (Layout bunları yönetecek)
+    
         self.cb_port = QComboBox(self.centralwidget)
         self.cb_baud = QComboBox(self.centralwidget)
         self.date = QLabel(self.centralwidget)
         self.Refresh = QPushButton(self.centralwidget)
         self.plainTextEdit = QPlainTextEdit(self.centralwidget)
         self.start_stop = QPushButton(self.centralwidget)
-        
-        # Terminal stili
+
         self.plainTextEdit.setStyleSheet(u"QPlainTextEdit { background-color: black; color: #00FF00; font-family: 'Consolas'; font-size: 12pt; }")
         self.plainTextEdit.setReadOnly(True)
         
@@ -39,30 +36,21 @@ class Ui_MainWindow(object):
         QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
-        MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"Responsive Serial Terminal", None))
+        MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"Innovita Terminal", None))
         self.Refresh.setText("Refresh")
 
-# --- İŞ MANTIĞI VE DİNAMİKLER (LAYOUT BURADA KURULUYOR) ---
 class TerminalApp(QMainWindow):
     def __init__(self):
         super().__init__()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
-        # ==========================================
-        # 1. LAYOUT (DÜZEN) AYARLARI - BOŞLUKLARI YOK EDER
-        # ==========================================
-        
-        # Üst bar için Yatay Düzen (HBox)
         self.top_layout = QHBoxLayout()
-        self.top_layout.setContentsMargins(10, 10, 10, 10) # Kenar boşlukları
-        self.top_layout.setSpacing(10) # Araçlar arası boşluk
+        self.top_layout.setContentsMargins(10, 10, 10, 10) 
+        self.top_layout.setSpacing(10) 
 
-        # Araçları sırayla ekleyelim
         self.top_layout.addWidget(self.ui.date)
-        
-        # Araya esnek boşluk (Stretch) ekliyoruz. 
-        # Bu, Tarih ile Butonlar arasını pencere büyüdükçe açar.
+
         self.top_layout.addStretch() 
         
         self.top_layout.addWidget(self.ui.cb_port)
@@ -70,18 +58,14 @@ class TerminalApp(QMainWindow):
         self.top_layout.addWidget(self.ui.start_stop)
         self.top_layout.addWidget(self.ui.Refresh)
 
-        # Tüm ekran için Dikey Düzen (VBox)
         self.main_layout = QVBoxLayout(self.ui.centralwidget)
-        self.main_layout.addLayout(self.top_layout) # Üst barı ekle
-        self.main_layout.addWidget(self.ui.plainTextEdit) # Terminali ekle (Kalan tüm alanı kaplar)
-
-        # ==========================================
+        self.main_layout.addLayout(self.top_layout) 
+        self.main_layout.addWidget(self.ui.plainTextEdit) 
 
         self.data_buffer = ""
         self.ui.start_stop.setText("Start")
-        
-        # ComboBox içerikleri
-        self.ui.cb_baud.addItem("Baud Seçiniz...")
+
+        self.ui.cb_baud.addItem("Select Baud")
         self.ui.cb_baud.addItems(["9600", "19200", "38400", "57600", "115200"])
         
         self.clock_timer = QTimer(self)
@@ -101,34 +85,30 @@ class TerminalApp(QMainWindow):
 
     def refresh_ports(self):
         self.ui.cb_port.clear()
-        self.ui.cb_port.addItem("Port Seçiniz...")
-        self.ui.cb_port.addItem("SIM_PORT")
+        self.ui.cb_port.addItem("Add Port")
+        self.ui.cb_port.addItem("COM2")
         for port in QSerialPortInfo.availablePorts():
             self.ui.cb_port.addItem(port.portName())
 
     def clear_terminal(self):
-        if QMessageBox.question(self, "Temizle", "Logları silmek istiyor musunuz?", 
+        if QMessageBox.question(self, "Refresh", "Are you sure you want to clear the terminal?", 
                                QMessageBox.Yes | QMessageBox.No) == QMessageBox.Yes:
             self.ui.plainTextEdit.clear()
 
     def toggle_simulation(self):
         if self.simulation_timer.isActive():
-            # Simülasyon durduğunda (Stop'a basıldığında) burası çalışır
             self.simulation_timer.stop()
             self.ui.start_stop.setText("Start")
-            
-            # Sildiğim o uyarı satırını geri ekledik
-            self.ui.plainTextEdit.appendPlainText("=== Bağlantı / Simülasyon Kapatıldı ===") 
+            self.ui.plainTextEdit.appendPlainText("=== Simulation is closed ===") 
         else:
-            # Simülasyon başlarken (Start'a basıldığında) burası çalışır
-            if "Seçiniz" in self.ui.cb_port.currentText() or "Seçiniz" in self.ui.cb_baud.currentText():
-                QMessageBox.warning(self, "Hata", "Lütfen Port ve Baud seçin.")
+            if self.ui.cb_port.currentIndex() == 0 or self.ui.cb_baud.currentIndex() == 0:
+                QMessageBox.warning(self, "Warning", "Select a valid port and baud rate")
                 return
             
             self.simulation_timer.start(1000)
             self.ui.start_stop.setText("Stop")
-            self.ui.plainTextEdit.appendPlainText(f"=== {self.ui.cb_port.currentText()} Bağlantısı Açıldı ===")
-            self.data_buffer = "" # Yeni başlangıçta eski yarım verileri temizle
+            self.ui.plainTextEdit.appendPlainText(f"=== {self.ui.cb_port.currentText()} Connection Started ===")
+            self.data_buffer = ""
 
     def generate_fake_data(self):
         s_seq = ''.join(random.choices(string.ascii_lowercase, k=2))
@@ -143,11 +123,11 @@ class TerminalApp(QMainWindow):
         clean = line.replace('\0', '').strip()
         parts = [p.strip() for p in clean.split(',')]
         if len(parts) >= 5:
-            out = f"[{datetime.now().strftime('%H:%M:%S')}]: Start: {parts[0]} Node {parts[1]} Veri: {parts[3]} End: {parts[-1]}"
+            out = f"[{datetime.now().strftime('%H:%M:%S')}]: Start: {parts[0]} Node {parts[1]} Data: {parts[3]} End: {parts[-1]}"
             self.ui.plainTextEdit.appendPlainText(out)
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = TerminalApp()
-    window.show() # Program normal boyutta açılır ama istendiği gibi büyütülebilir
+    window.show() 
     sys.exit(app.exec())
