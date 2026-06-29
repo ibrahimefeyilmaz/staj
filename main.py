@@ -1,4 +1,5 @@
 import sys
+import functions
 from datetime import datetime
 from PySide6.QtCore import QCoreApplication, QMetaObject, QRect, QTimer, Qt, QStringListModel, QEvent
 from PySide6.QtGui import QFont, QIcon
@@ -147,11 +148,12 @@ class FilterWidget(QWidget):
     def delete_filter(self):
         self.on_delete(self)
 
-
 class DisplayBarWidget(QWidget):
-    """Terminalin Üstündeki Canlı Veri Barı"""
+    """Terminalin Üstündeki Canlı Veri Barı (Dropdown Entegrasyonlu)"""
     def __init__(self, node_id, msg_id, parent=None):
         super().__init__(parent)
+        self.last_raw_data = "" # Gelen son ham veriyi hafızada tutmak için
+        
         layout = QHBoxLayout(self)
         layout.setContentsMargins(10, 5, 10, 5)
         layout.setSpacing(15)
@@ -168,11 +170,22 @@ class DisplayBarWidget(QWidget):
         self.label_info.setFixedWidth(130)
         layout.addWidget(self.label_info)
 
+        # DROPDOWN (AÇILIR MENÜ) GÜNCELLEMESİ
         self.dropdown = QComboBox(self)
-        self.dropdown.addItem("Select Action")
-        self.dropdown.addItem("Option 1")
-        self.dropdown.setFixedWidth(120)
+        self.dropdown.addItem("Ham Veri (Raw)") # Varsayılan seçenek
+        
+        # functions.py içindeki fonksiyon isimlerini dinamik olarak tarayıp ekliyoruz
+        for attr_name in dir(functions):
+            attr = getattr(functions, attr_name)
+            # Sadece bizim yazdığımız fonksiyonları (callable olanları) listeye ekle
+            if callable(attr) and not attr_name.startswith("__"):
+                self.dropdown.addItem(attr_name)
+                
+        self.dropdown.setFixedWidth(160)
         self.dropdown.setStyleSheet("background-color: #444; color: white;")
+        
+        # Kullanıcı dropdown menüyü değiştirdiğinde veriyi anında yeniden anlamlandırsın diye bağladık
+        self.dropdown.currentIndexChanged.connect(self.refresh_display)
         layout.addWidget(self.dropdown)
 
         self.label_data = QLabel("Waiting for data...", self)
@@ -180,7 +193,29 @@ class DisplayBarWidget(QWidget):
         layout.addWidget(self.label_data, stretch=1)
 
     def update_live_data(self, data_text):
-        self.label_data.setText(data_text)
+        """Seri porttan yeni veri aktıkça çağrılan ana metot"""
+        self.last_raw_data = data_text # Gelen yeni ham veriyi hafızaya kaydet
+        self.refresh_display()         # Ekrana basma mantığını tetikle
+
+    def refresh_display(self):
+        """Veriyi seçili fonksiyona göre anlamlandırıp ekrana basan fonksiyon"""
+        if not self.last_raw_data:
+            return
+
+        secili_fonksiyon_adi = self.dropdown.currentText()
+
+        # Eğer kullanıcı "Ham Veri (Raw)" seçtiyse veya geçersiz bir durumsa veriyi olduğu gibi bas
+        if secili_fonksiyon_adi == "Ham Veri (Raw)":
+            self.label_data.setText(self.last_raw_data)
+        else:
+            # functions.py dosyasından ismi eşleşen fonksiyonu cımbızla çekiyoruz
+            func = getattr(functions, secili_fonksiyon_adi, None)
+            if func:
+                # Fonksiyonu çalıştırıp, ham veriyi parametre olarak gönderiyoruz
+                anlamlandirilmis_veri = func(self.last_raw_data)
+                self.label_data.setText(str(anlamlandirilmis_veri))
+            else:
+                self.label_data.setText(self.last_raw_data)
 
     def set_active_state(self, is_active):
         if is_active:
@@ -191,7 +226,7 @@ class DisplayBarWidget(QWidget):
             self.label_info.setStyleSheet("color: #757575; text-decoration: line-through;")
             self.label_data.setStyleSheet("color: #9E9E9E; font-family: 'Consolas', monospace; font-size: 11pt; font-style: italic;")
             self.setStyleSheet("DisplayBarWidget { background-color: #1e1e1e; border-radius: 4px; border: 1px dashed #555; }")
-
+            
 class TerminalApp(QMainWindow):
     def __init__(self):
         super().__init__()
