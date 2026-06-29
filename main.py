@@ -11,30 +11,28 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(1150, 610) # Listeyi sığdırmak için genişlik biraz artırıldı
+        MainWindow.resize(1150, 610) 
+        
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
+        
         self.cb_port = QComboBox(self.centralwidget)
         self.cb_port.setObjectName(u"cb_port")
-        self.cb_port.setGeometry(QRect(610, 70, 111, 26))
-        font = QFont()
-        font.setBold(False)
-        self.cb_port.setFont(font)
+        
         self.cb_baud = QComboBox(self.centralwidget)
         self.cb_baud.setObjectName(u"cb_baud")
-        self.cb_baud.setGeometry(QRect(730, 70, 121, 26))
+        
         self.date = QLabel(self.centralwidget)
         self.date.setObjectName(u"date")
-        self.date.setGeometry(QRect(30, 30, 111, 20))
+        
         self.Refresh = QPushButton(self.centralwidget)
         self.Refresh.setObjectName(u"Refresh")
-        self.Refresh.setGeometry(QRect(950, 70, 81, 26))
         font1 = QFont()
         font1.setBold(True)
         self.Refresh.setFont(font1)
+        
         self.plainTextEdit = QPlainTextEdit(self.centralwidget)
         self.plainTextEdit.setObjectName(u"plainTextEdit")
-        self.plainTextEdit.setGeometry(QRect(30, 110, 1001, 421))
         self.plainTextEdit.setStyleSheet(u"QPlainTextEdit {\n"
 "    background-color: black;\n"
 "    color: #00FF00; \n"
@@ -42,56 +40,49 @@ class Ui_MainWindow(object):
 "    font-size: 12pt;\n"
 "}")
         self.plainTextEdit.setReadOnly(True)
+        
         self.start_stop = QPushButton(self.centralwidget)
         self.start_stop.setObjectName(u"start_stop")
-        self.start_stop.setGeometry(QRect(860, 70, 81, 26))
+        
         self.widget = QWidget(self.centralwidget)
         self.widget.setObjectName(u"widget")
-        self.widget.setGeometry(QRect(30, 70, 492, 28))
         self.horizontalLayout = QHBoxLayout(self.widget)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
+        
         self.label_node_id = QLabel(self.widget)
         self.label_node_id.setObjectName(u"label_node_id")
-
         self.horizontalLayout.addWidget(self.label_node_id)
 
         self.le_node_id = QLineEdit(self.widget)
         self.le_node_id.setObjectName(u"le_node_id")
-
         self.horizontalLayout.addWidget(self.le_node_id)
 
         self.label_msg_id = QLabel(self.widget)
         self.label_msg_id.setObjectName(u"label_msg_id")
-
         self.horizontalLayout.addWidget(self.label_msg_id)
 
         self.le_msg_id = QLineEdit(self.widget)
         self.le_msg_id.setObjectName(u"le_msg_id")
-
         self.horizontalLayout.addWidget(self.le_msg_id)
 
         self.btn_apply_filter = QPushButton(self.widget)
         self.btn_apply_filter.setObjectName(u"btn_apply_filter")
-
         self.horizontalLayout.addWidget(self.btn_apply_filter)
 
         self.btn_clear_filter = QPushButton(self.widget)
         self.btn_clear_filter.setObjectName(u"btn_clear_filter")
-
         self.horizontalLayout.addWidget(self.btn_clear_filter)
 
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 1057, 33))
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName(u"statusbar")
         MainWindow.setStatusBar(self.statusbar)
 
         self.retranslateUi(MainWindow)
-
         QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
@@ -101,12 +92,12 @@ class Ui_MainWindow(object):
         self.start_stop.setText(QCoreApplication.translate("MainWindow", u"Start", None))
         self.label_node_id.setText(QCoreApplication.translate("MainWindow", u"Node ID", None))
         self.label_msg_id.setText(QCoreApplication.translate("MainWindow", u"MSG ID", None))
-        self.btn_apply_filter.setText(QCoreApplication.translate("MainWindow", u"Add Filter", None)) # 'Apply Filters' -> 'Add Filter' olarak değiştirildi
+        self.btn_apply_filter.setText(QCoreApplication.translate("MainWindow", u"Add Filter", None)) 
         self.btn_clear_filter.setText(QCoreApplication.translate("MainWindow", u"Clear Filters", None))
 
 
 class FilterWidget(QWidget):
-    """Filtre listesindeki her bir satır için özel widget (Görünürlük ve Silme butonları ile birlikte)"""
+    """Sağ Paneldeki Liste Elemanı Widget'ı"""
     def __init__(self, node_id, msg_id, on_toggle, on_delete, parent=None):
         super().__init__(parent)
         self.node_id = node_id
@@ -119,7 +110,6 @@ class FilterWidget(QWidget):
         layout.setContentsMargins(5, 2, 5, 2)
         layout.setSpacing(5)
 
-        # Filtre metnini oluşturma
         text_parts = []
         if node_id: text_parts.append(f"Node: {node_id}")
         if msg_id: text_parts.append(f"MSG: {msg_id}")
@@ -129,14 +119,12 @@ class FilterWidget(QWidget):
         layout.addWidget(self.label)
         layout.addStretch()
 
-        # Görünürlük / Aktiflik Butonu (göz simgesi yerine 'O' / 'X' mantığı veya metin kullanıldı)
         self.btn_visible = QPushButton("Active", self)
         self.btn_visible.setFixedWidth(55)
         self.btn_visible.setStyleSheet("QPushButton { background-color: #4CAF50; color: white; font-size: 10px; font-weight: bold; }")
         self.btn_visible.clicked.connect(self.toggle_active)
         layout.addWidget(self.btn_visible)
 
-        # Silme Butonu
         self.btn_delete = QPushButton("X", self)
         self.btn_delete.setFixedWidth(25)
         self.btn_delete.setStyleSheet("QPushButton { background-color: #f44336; color: white; font-weight: bold; }")
@@ -154,11 +142,55 @@ class FilterWidget(QWidget):
             self.btn_visible.setStyleSheet("QPushButton { background-color: #757575; color: white; font-size: 10px; font-weight: bold; }")
             self.label.setStyleSheet("color: #757575; text-decoration: line-through;")
         
-        self.on_toggle()
+        self.on_toggle(self)
 
     def delete_filter(self):
         self.on_delete(self)
 
+
+class DisplayBarWidget(QWidget):
+    """Terminalin Üstündeki Canlı Veri Barı"""
+    def __init__(self, node_id, msg_id, parent=None):
+        super().__init__(parent)
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(10, 5, 10, 5)
+        layout.setSpacing(15)
+        
+        self.setStyleSheet("DisplayBarWidget { background-color: #2b2b2b; border-radius: 4px; border: 1px solid #444; }")
+
+        text_parts = []
+        if node_id: text_parts.append(f"Node: {node_id}")
+        if msg_id: text_parts.append(f"MSG: {msg_id}")
+        filter_text = " | ".join(text_parts)
+
+        self.label_info = QLabel(filter_text, self)
+        self.label_info.setStyleSheet("font-weight: bold; color: #4fc3f7;") 
+        self.label_info.setFixedWidth(130)
+        layout.addWidget(self.label_info)
+
+        self.dropdown = QComboBox(self)
+        self.dropdown.addItem("Select Action")
+        self.dropdown.addItem("Option 1")
+        self.dropdown.setFixedWidth(120)
+        self.dropdown.setStyleSheet("background-color: #444; color: white;")
+        layout.addWidget(self.dropdown)
+
+        self.label_data = QLabel("Waiting for data...", self)
+        self.label_data.setStyleSheet("color: #69f0ae; font-family: 'Consolas', monospace; font-size: 11pt;") 
+        layout.addWidget(self.label_data, stretch=1)
+
+    def update_live_data(self, data_text):
+        self.label_data.setText(data_text)
+
+    def set_active_state(self, is_active):
+        if is_active:
+            self.label_info.setStyleSheet("font-weight: bold; color: #4fc3f7;")
+            self.label_data.setStyleSheet("color: #69f0ae; font-family: 'Consolas', monospace; font-size: 11pt;")
+            self.setStyleSheet("DisplayBarWidget { background-color: #2b2b2b; border-radius: 4px; border: 1px solid #444; }")
+        else:
+            self.label_info.setStyleSheet("color: #757575; text-decoration: line-through;")
+            self.label_data.setStyleSheet("color: #9E9E9E; font-family: 'Consolas', monospace; font-size: 11pt; font-style: italic;")
+            self.setStyleSheet("DisplayBarWidget { background-color: #1e1e1e; border-radius: 4px; border: 1px dashed #555; }")
 
 class TerminalApp(QMainWindow):
     def __init__(self):
@@ -169,13 +201,11 @@ class TerminalApp(QMainWindow):
         self.serial_port = QSerialPort(self)
         self.serial_port.readyRead.connect(self.read_serial_data)
 
-        # Filtreleri saklayacağımız liste dinamik nesneleri tutacak
         self.active_filters = []
 
         self.top_layout = QHBoxLayout()
         self.top_layout.setContentsMargins(10, 10, 10, 10)
         self.top_layout.setSpacing(10)
-
         self.top_layout.addWidget(self.ui.date)
         self.top_layout.addStretch()
         self.top_layout.addWidget(self.ui.cb_port)
@@ -183,7 +213,6 @@ class TerminalApp(QMainWindow):
         self.top_layout.addWidget(self.ui.start_stop)
         self.top_layout.addWidget(self.ui.Refresh)
 
-        # SAĞ PANEL: Filtre listesi başlığı ve QListWidget bileşeni
         self.right_panel_layout = QVBoxLayout()
         self.filter_list_label = QLabel("Active Filters List", self)
         font_title = QFont()
@@ -191,17 +220,22 @@ class TerminalApp(QMainWindow):
         self.filter_list_label.setFont(font_title)
         
         self.filter_list_widget = QListWidget(self)
-        self.filter_list_widget.setFixedWidth(250) # Sağ tarafta sabit genişlik
+        self.filter_list_widget.setFixedWidth(250) 
         
         self.right_panel_layout.addWidget(self.filter_list_label)
         self.right_panel_layout.addWidget(self.filter_list_widget)
 
-        # ORTA PANEL: Terminal ve Üst filtre barı
         self.center_layout = QVBoxLayout()
         self.center_layout.addWidget(self.ui.widget)  
+
+        self.display_bars_container = QWidget(self)
+        self.display_bars_layout = QVBoxLayout(self.display_bars_container)
+        self.display_bars_layout.setContentsMargins(0, 5, 0, 5)
+        self.display_bars_layout.setSpacing(5)
+        self.center_layout.addWidget(self.display_bars_container)
+
         self.center_layout.addWidget(self.ui.plainTextEdit)
 
-        # ANA ALT LAYOUT: Terminal (Sol) ve Filtre Listesi (Sağ) yan yana
         self.content_layout = QHBoxLayout()
         self.content_layout.addLayout(self.center_layout, stretch=4)
         self.content_layout.addLayout(self.right_panel_layout, stretch=1)
@@ -211,28 +245,22 @@ class TerminalApp(QMainWindow):
         self.main_layout.addLayout(self.content_layout)
 
         self.data_buffer = ""
-
-        # --- AUTOCOMPLETE & HISTORY SETUP ---
         self.node_history = []
         self.msg_history = []
 
-        # Node ID Completer
         self.node_model = QStringListModel(self.node_history, self)
         self.node_completer = QCompleter(self.node_model, self)
         self.node_completer.setCaseSensitivity(Qt.CaseInsensitive)
         self.ui.le_node_id.setCompleter(self.node_completer)
         self.ui.le_node_id.installEventFilter(self)
 
-        # MSG ID Completer
         self.msg_model = QStringListModel(self.msg_history, self)
         self.msg_completer = QCompleter(self.msg_model, self)
         self.msg_completer.setCaseSensitivity(Qt.CaseInsensitive)
         self.ui.le_msg_id.setCompleter(self.msg_completer)
         self.ui.le_msg_id.installEventFilter(self)
-        # ------------------------------------
 
         self.ui.start_stop.setText("Start")
-
         self.ui.cb_baud.addItem("Select Baud")
         self.ui.cb_baud.addItems(["9600", "19200", "38400", "57600", "115200", "230400", "460800", "921600"])
         
@@ -245,7 +273,7 @@ class TerminalApp(QMainWindow):
         
         self.ui.Refresh.clicked.connect(self.clear_terminal)
         self.ui.start_stop.clicked.connect(self.toggle_connection)
-        self.ui.btn_apply_filter.clicked.connect(self.add_filter) # apply_filters fonksiyonu add_filter yapıldı
+        self.ui.btn_apply_filter.clicked.connect(self.add_filter) 
         self.ui.btn_clear_filter.clicked.connect(self.clear_filters)
 
     def eventFilter(self, obj, event):
@@ -259,13 +287,10 @@ class TerminalApp(QMainWindow):
         return super().eventFilter(obj, event)
 
     def update_history(self, new_value, history_list, model):
-        if not new_value:
-            return
-        if new_value in history_list:
-            history_list.remove(new_value)
+        if not new_value: return
+        if new_value in history_list: history_list.remove(new_value)
         history_list.insert(0, new_value)
-        if len(history_list) > 5:
-            history_list.pop()
+        if len(history_list) > 5: history_list.pop()
         model.setStringList(list(history_list))
 
     def update_datetime(self):
@@ -283,7 +308,6 @@ class TerminalApp(QMainWindow):
             self.ui.plainTextEdit.clear()
 
     def add_filter(self):
-        """Kutulardaki verilere göre listeye yeni bir filtre varyasyonu ekler"""
         node_id_str = self.ui.le_node_id.text().strip()
         msg_id_str = self.ui.le_msg_id.text().strip()
 
@@ -311,52 +335,64 @@ class TerminalApp(QMainWindow):
                 QMessageBox.warning(self, "Invalid Input", "MSG ID must be a numeric value.")
                 return
 
-        # Aynı filtrenin listede zaten var olup olmadığını kontrol etme
-        for existing_widget in self.active_filters:
-            if existing_widget.node_id == node_id_str and existing_widget.msg_id == msg_id_str:
+        for f_obj in self.active_filters:
+            if f_obj['node_id'] == node_id_str and f_obj['msg_id'] == msg_id_str:
                 QMessageBox.information(self, "Duplicate Filter", "This filter has already been added to the list.")
                 return
 
-        # Geçmiş listelerini (Autocomplete) güncelle
         if node_id_str: self.update_history(node_id_str, self.node_history, self.node_model)
         if msg_id_str: self.update_history(msg_id_str, self.msg_history, self.msg_model)
 
-        # Listeye (QListWidget) özel widget olarak filtre satırını ekleme
+        display_bar = DisplayBarWidget(node_id_str, msg_id_str)
+        self.display_bars_layout.addWidget(display_bar)
+
         item = QListWidgetItem(self.filter_list_widget)
         filter_widget = FilterWidget(node_id_str, msg_id_str, self.on_filter_changed, self.remove_single_filter, self)
         item.setSizeHint(filter_widget.sizeHint())
-        
         self.filter_list_widget.addItem(item)
         self.filter_list_widget.setItemWidget(item, filter_widget)
-        
-        # Filtreyi listemize kaydetme
-        self.active_filters.append(filter_widget)
 
-        # Terminale bilgi yazdırma
+        self.active_filters.append({
+            'node_id': node_id_str,
+            'msg_id': msg_id_str,
+            'is_active': True,
+            'display_bar': display_bar,
+            'filter_widget': filter_widget,
+            'list_item': item
+        })
+
         info = f"Added Filter -> Node: '{node_id_str or 'Any'}', MSG: '{msg_id_str or 'Any'}'"
         self.ui.plainTextEdit.appendPlainText(f"--- {info} ---")
 
-        # Giriş kutularını temizleme
         self.ui.le_node_id.clear()
         self.ui.le_msg_id.clear()
 
-    def on_filter_changed(self):
-        """Herhangi bir filtrenin aktif/pasif durumu değiştiğinde tetiklenir."""
+    def on_filter_changed(self, triggered_widget):
+        for f_obj in self.active_filters:
+            if f_obj['filter_widget'] == triggered_widget:
+                f_obj['is_active'] = triggered_widget.is_active
+                f_obj['display_bar'].set_active_state(triggered_widget.is_active)
+                break
         self.ui.plainTextEdit.appendPlainText("--- Filter States Updated ---")
 
-    def remove_single_filter(self, filter_widget):
-        """Satırdaki 'X' butonuna basıldığında o filtreyi listeden siler"""
-        for i in range(self.filter_list_widget.count()):
-            item = self.filter_list_widget.item(i)
-            widget = self.filter_list_widget.itemWidget(item)
-            if widget == filter_widget:
-                self.filter_list_widget.takeItem(i)
-                self.active_filters.remove(filter_widget)
-                self.ui.plainTextEdit.appendPlainText(f"--- Removed Filter: Node: {widget.node_id or 'Any'} | MSG: {widget.msg_id or 'Any'} ---")
+    def remove_single_filter(self, triggered_widget):
+        for f_obj in self.active_filters:
+            if f_obj['filter_widget'] == triggered_widget:
+                self.display_bars_layout.removeWidget(f_obj['display_bar'])
+                f_obj['display_bar'].deleteLater()
+                
+                row = self.filter_list_widget.row(f_obj['list_item'])
+                self.filter_list_widget.takeItem(row)
+                
+                self.active_filters.remove(f_obj)
+                self.ui.plainTextEdit.appendPlainText(f"--- Removed Filter: Node: {f_obj['node_id'] or 'Any'} | MSG: {f_obj['msg_id'] or 'Any'} ---")
                 break
 
     def clear_filters(self):
-        """Clear Filters butonuna basıldığında sağdaki listenin tamamını temizler"""
+        for f_obj in self.active_filters:
+            self.display_bars_layout.removeWidget(f_obj['display_bar'])
+            f_obj['display_bar'].deleteLater()
+            
         self.filter_list_widget.clear()
         self.active_filters.clear()
         self.ui.le_node_id.clear()
@@ -397,51 +433,46 @@ class TerminalApp(QMainWindow):
     def parse_and_display(self, line):
         clean = line.replace('\0', '').strip()
         
-        if not clean:
-            return
+        if not clean: return
         
         parts = [p.strip() for p in clean.split(',')]
         length = len(parts)
 
-        if length < 3:
-            return
-        
-        if(parts[0] != "iy" or parts[-1] != "ky"):
-            return
+        if length < 3: return
+        if(parts[0] != "iy" or parts[-1] != "ky"): return
             
         current_node_id = parts[1].strip()
         current_msg_id = parts[2].strip()
 
-        # --- ÇOKLU VARYASYONLU FİLTRE MANTIĞI ---
-        # Eğer aktif filtreler listesinde eleman varsa eşleşme kontrolü yapılır.
-        # Eleman yoksa (filtre uygulanmadıysa) tüm veriler terminale akar.
+        doesDataExist = length >= 5
+        data_str = ", ".join(parts[3:-1]) if doesDataExist else "NO DATA"
+
+        # --- DÜZELTİLEN FİLTRELEME VE YAZDIRMA MANTIĞI ---
         if self.active_filters:
             match_found = False
             has_enabled_filter = False
 
-            for f in self.active_filters:
-                if not f.is_active:
-                    continue  # Pasif (görünürlüğü kapatılmış) filtreleri es geç
+            for f_obj in self.active_filters:
+                # 1. Eğer filtre pasifse, onu hiçbir eşleşme işlemine dahil ETME (eski kodun gibi)
+                if not f_obj['is_active']:
+                    continue  
                 
                 has_enabled_filter = True
                 
-                # Filtre koşullarının değerlendirilmesi (OR mantığı)
-                node_match = (f.node_id == current_node_id) if f.node_id else True
-                msg_match = (f.msg_id == current_msg_id) if f.msg_id else True
+                # 2. Eşleşme var mı kontrol et
+                node_match = (f_obj['node_id'] == current_node_id) if f_obj['node_id'] else True
+                msg_match = (f_obj['msg_id'] == current_msg_id) if f_obj['msg_id'] else True
                 
                 if node_match and msg_match:
                     match_found = True
-                    break # Bir eşleşme bulmamız bu mesajı yazdırmak için yeterli
+                    # 3. Filtre aktifse ve eşleştiyse Display Bar'ı güncelle
+                    f_obj['display_bar'].update_live_data(data_str)
             
-            # Eğer en az bir aktif filtre varsa ve gelen veri hiçbirine uymuyorsa fonksiyonu bitir (Ekrana yazma)
+            # 4. En az 1 aktif filtre varsa VE gelen veri hiçbiriyle uyuşmadıysa yazdırılmadan çık.
             if has_enabled_filter and not match_found:
                 return
-        # ----------------------------------------
-
-        doesDataExist = length >= 5
 
         if doesDataExist:
-            data_str = ", ".join(parts[3:-1])
             data_status = f"DATA: {data_str}"
         else:
             data_status = "NO DATA"
@@ -449,8 +480,7 @@ class TerminalApp(QMainWindow):
         out = f"[{datetime.now().strftime('%H:%M:%S:%f')[:-3]}] NODE ID: {current_node_id:<2} MSG ID: {current_msg_id:<3} {data_status}"
         self.ui.plainTextEdit.appendPlainText(out)
 
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    window = TerminalApp()
-    window.show()
-    sys.exit(app.exec())
+app = QApplication(sys.argv)
+window = TerminalApp()
+window.show()
+sys.exit(app.exec())
