@@ -241,7 +241,7 @@ class TerminalApp(QMainWindow):
         self.base_log_name = ""
         self.current_log_index = 0
         self.log_line_count = 0
-        self.MAX_LOG_LINES = 10000  # 10,000 satırda bir yeni dosyaya geçer (_1, _2 diye)
+        self.MAX_LOG_SIZE = 1024 * 1024
         self.is_logging = False
 
         self.top_layout = QHBoxLayout()
@@ -463,15 +463,14 @@ class TerminalApp(QMainWindow):
         log_line = f"{timestamp},{node_id},{msg_id},{data_str}\n"
         self.log_file.write(log_line)
         self.log_file.flush() # Veri kaybı yaşamamak için hemen yazdır
+
+        filename = f"{self.base_log_name}_{self.current_log_index}.csv"
+        filepath = os.path.join(self.log_folder, filename)
         
-        self.log_line_count += 1
-        
-        # Sınır aşılırsa yeni dosyaya geç (Rollover)
-        if self.log_line_count >= self.MAX_LOG_LINES:
-            self.log_file.close()
-            self.current_log_index += 1
-            self.log_line_count = 0
-            self.check_and_open_log_file()
+        if os.path.exists(filepath) and os.path.getsize(filepath) >= self.MAX_LOG_SIZE:
+            self.log_file.close()             # Mevcut 1 MB'lık dosyayı kapat
+            self.current_log_index += 1       # Dosya indeksini artır (_0 idi, _1 olacak)
+            self.check_and_open_log_file()    # check_and_open fonksiyonu otomatik olarak yeni dosyayı açar
 
     # --- GERİ KALAN MEVCUT FONKSİYONLAR ---
     def eventFilter(self, obj, event):
