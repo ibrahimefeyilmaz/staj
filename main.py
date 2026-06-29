@@ -170,21 +170,17 @@ class DisplayBarWidget(QWidget):
         self.label_info.setFixedWidth(130)
         layout.addWidget(self.label_info)
 
-        # DROPDOWN (AÇILIR MENÜ) GÜNCELLEMESİ
         self.dropdown = QComboBox(self)
-        self.dropdown.addItem("Ham Veri (Raw)") # Varsayılan seçenek
+        self.dropdown.addItem("Show Raw Data") 
         
-        # functions.py içindeki fonksiyon isimlerini dinamik olarak tarayıp ekliyoruz
         for attr_name in dir(functions):
             attr = getattr(functions, attr_name)
-            # Sadece bizim yazdığımız fonksiyonları (callable olanları) listeye ekle
             if callable(attr) and not attr_name.startswith("__"):
                 self.dropdown.addItem(attr_name)
                 
         self.dropdown.setFixedWidth(160)
         self.dropdown.setStyleSheet("background-color: #444; color: white;")
-        
-        # Kullanıcı dropdown menüyü değiştirdiğinde veriyi anında yeniden anlamlandırsın diye bağladık
+
         self.dropdown.currentIndexChanged.connect(self.refresh_display)
         layout.addWidget(self.dropdown)
 
@@ -193,30 +189,25 @@ class DisplayBarWidget(QWidget):
         layout.addWidget(self.label_data, stretch=1)
 
     def update_live_data(self, data_list):
-        """Seri porttan yeni veri aktıkça çağrılan ana metot"""
         self.last_data_list = data_list
         self.refresh_display()
 
     def refresh_display(self):
-        """Veriyi seçili fonksiyona göre anlamlandırıp ekrana basan fonksiyon"""
+
         if not self.last_data_list:
             return
 
-        secili_fonksiyon_adi = self.dropdown.currentText()
+        selected_function = self.dropdown.currentText()
 
-        # Eğer kullanıcı "Ham Veri (Raw)" seçtiyse veya geçersiz bir durumsa veriyi olduğu gibi bas
-        if secili_fonksiyon_adi == "Ham Veri (Raw)":
+        if selected_function == "Show Raw Data":
             self.label_data.setText(", ".join(self.last_data_list))
         else:
-            # functions.py dosyasından ismi eşleşen fonksiyonu çek
-            func = getattr(functions, secili_fonksiyon_adi, None)
+            func = getattr(functions, selected_function, None)
             if func:
-                # Fonksiyonu çalıştırıp, LİSTEYİ parametre olarak gönderiyoruz
                 try:
-                    anlamlandirilmis_veri = func(self.last_data_list)
-                    self.label_data.setText(str(anlamlandirilmis_veri))
+                    meaningful_data = func(self.last_data_list)
+                    self.label_data.setText(str(meaningful_data))
                 except Exception as e:
-                    # Fonksiyon içinde bir hata olursa programın çökmesini engelle
                     self.label_data.setText(f"Hata: {str(e)}")
             else:
                 self.label_data.setText(", ".join(self.last_data_list))
@@ -483,13 +474,10 @@ class TerminalApp(QMainWindow):
         current_node_id = self.convert_to_decimal(parts[1])
         current_msg_id = self.convert_to_decimal(parts[2])
 
-        # Veri var mı kontrolü
         doesDataExist = length >= 5
-        
-        # 3'ten son elemana kadar olan kısmı (ky hariç) liste olarak al
+
         data_list = parts[3:-1] if doesDataExist else []
-        
-        # Terminal paneline (QPlainTextEdit) basmak için hala string'e ihtiyacımız var
+
         data_str = ", ".join(data_list) if doesDataExist else "NO DATA"
 
         if self.active_filters:
@@ -507,10 +495,8 @@ class TerminalApp(QMainWindow):
                 
                 if node_match and msg_match:
                     match_found = True
-                    # DİKKAT: Artık data_str değil, data_list gönderiyoruz!
                     f_obj['display_bar'].update_live_data(data_list)
-            
-            # 4. En az 1 aktif filtre varsa VE gelen veri hiçbiriyle uyuşmadıysa yazdırılmadan çık.
+
             if has_enabled_filter and not match_found:
                 return
 
@@ -523,30 +509,22 @@ class TerminalApp(QMainWindow):
         self.ui.plainTextEdit.appendPlainText(out)
 
     def convert_to_decimal(self, number_str):
-        # Önce başındaki/sonundaki boşlukları temizleyip küçük harfe çevirelim 
-        # (Böylece '0X', 'H' gibi büyük harf gelirse kod patlamaz)
         val = number_str.strip().lower()
 
         try:
-            # 0x ile başlıyorsa (örn: 0x1a)
             if val.startswith("0x"):
                 return str(int(val, 16))
-                
-            # h ile başlıyorsa (örn: h1a), ilk karakteri (h) atlayıp çeviriyoruz [1:]
+
             elif val.startswith("h"):
                 return str(int(val[1:], 16))
-                
-            # h ile bitiyorsa (örn: 1ah), son karakteri (h) atlayıp çeviriyoruz [:-1]
+
             elif val.endswith("h"):
                 return str(int(val[:-1], 16))
-                
-            # Hiçbirine uymuyorsa zaten decimal'dir, sadece kontrol amaçlı 10 tabanında çeviriyoruz
+            
             else:
                 return str(int(val, 10))
                 
         except ValueError:
-            # Eğer sayıya çevrilemeyen saçma sapan bir veri ("ABC" vb.) gelirse, 
-            # program çökmesin diye veriyi olduğu gibi geri döndürüyoruz.
             return number_str
         
 app = QApplication(sys.argv)
