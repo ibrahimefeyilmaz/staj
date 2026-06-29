@@ -152,7 +152,7 @@ class DisplayBarWidget(QWidget):
     """Terminalin Üstündeki Canlı Veri Barı (Dropdown Entegrasyonlu)"""
     def __init__(self, node_id, msg_id, parent=None):
         super().__init__(parent)
-        self.last_raw_data = "" # Gelen son ham veriyi hafızada tutmak için
+        self.last_data_list = []
         
         layout = QHBoxLayout(self)
         layout.setContentsMargins(10, 5, 10, 5)
@@ -192,30 +192,34 @@ class DisplayBarWidget(QWidget):
         self.label_data.setStyleSheet("color: #69f0ae; font-family: 'Consolas', monospace; font-size: 11pt;") 
         layout.addWidget(self.label_data, stretch=1)
 
-    def update_live_data(self, data_text):
+    def update_live_data(self, data_list):
         """Seri porttan yeni veri aktıkça çağrılan ana metot"""
-        self.last_raw_data = data_text # Gelen yeni ham veriyi hafızaya kaydet
-        self.refresh_display()         # Ekrana basma mantığını tetikle
+        self.last_data_list = data_list
+        self.refresh_display()
 
     def refresh_display(self):
         """Veriyi seçili fonksiyona göre anlamlandırıp ekrana basan fonksiyon"""
-        if not self.last_raw_data:
+        if not self.last_data_list:
             return
 
         secili_fonksiyon_adi = self.dropdown.currentText()
 
         # Eğer kullanıcı "Ham Veri (Raw)" seçtiyse veya geçersiz bir durumsa veriyi olduğu gibi bas
         if secili_fonksiyon_adi == "Ham Veri (Raw)":
-            self.label_data.setText(self.last_raw_data)
+            self.label_data.setText(", ".join(self.last_data_list))
         else:
-            # functions.py dosyasından ismi eşleşen fonksiyonu cımbızla çekiyoruz
+            # functions.py dosyasından ismi eşleşen fonksiyonu çek
             func = getattr(functions, secili_fonksiyon_adi, None)
             if func:
-                # Fonksiyonu çalıştırıp, ham veriyi parametre olarak gönderiyoruz
-                anlamlandirilmis_veri = func(self.last_raw_data)
-                self.label_data.setText(str(anlamlandirilmis_veri))
+                # Fonksiyonu çalıştırıp, LİSTEYİ parametre olarak gönderiyoruz
+                try:
+                    anlamlandirilmis_veri = func(self.last_data_list)
+                    self.label_data.setText(str(anlamlandirilmis_veri))
+                except Exception as e:
+                    # Fonksiyon içinde bir hata olursa programın çökmesini engelle
+                    self.label_data.setText(f"Hata: {str(e)}")
             else:
-                self.label_data.setText(self.last_raw_data)
+                self.label_data.setText(", ".join(self.last_data_list))
 
     def set_active_state(self, is_active):
         if is_active:
@@ -476,32 +480,35 @@ class TerminalApp(QMainWindow):
         if length < 3: return
         if(parts[0] != "iy" or parts[-1] != "ky"): return
             
-        current_node_id = parts[1].strip()
-        current_msg_id = parts[2].strip()
+        current_node_id = self.convert_to_decimal(parts[1])
+        current_msg_id = self.convert_to_decimal(parts[2])
 
+        # Veri var mı kontrolü
         doesDataExist = length >= 5
-        data_str = ", ".join(parts[3:-1]) if doesDataExist else "NO DATA"
+        
+        # 3'ten son elemana kadar olan kısmı (ky hariç) liste olarak al
+        data_list = parts[3:-1] if doesDataExist else []
+        
+        # Terminal paneline (QPlainTextEdit) basmak için hala string'e ihtiyacımız var
+        data_str = ", ".join(data_list) if doesDataExist else "NO DATA"
 
-        # --- DÜZELTİLEN FİLTRELEME VE YAZDIRMA MANTIĞI ---
         if self.active_filters:
             match_found = False
             has_enabled_filter = False
 
             for f_obj in self.active_filters:
-                # 1. Eğer filtre pasifse, onu hiçbir eşleşme işlemine dahil ETME (eski kodun gibi)
                 if not f_obj['is_active']:
                     continue  
                 
                 has_enabled_filter = True
                 
-                # 2. Eşleşme var mı kontrol et
                 node_match = (f_obj['node_id'] == current_node_id) if f_obj['node_id'] else True
                 msg_match = (f_obj['msg_id'] == current_msg_id) if f_obj['msg_id'] else True
                 
                 if node_match and msg_match:
                     match_found = True
-                    # 3. Filtre aktifse ve eşleştiyse Display Bar'ı güncelle
-                    f_obj['display_bar'].update_live_data(data_str)
+                    # DİKKAT: Artık data_str değil, data_list gönderiyoruz!
+                    f_obj['display_bar'].update_live_data(data_list)
             
             # 4. En az 1 aktif filtre varsa VE gelen veri hiçbiriyle uyuşmadıysa yazdırılmadan çık.
             if has_enabled_filter and not match_found:
@@ -515,6 +522,33 @@ class TerminalApp(QMainWindow):
         out = f"[{datetime.now().strftime('%H:%M:%S:%f')[:-3]}] NODE ID: {current_node_id:<2} MSG ID: {current_msg_id:<3} {data_status}"
         self.ui.plainTextEdit.appendPlainText(out)
 
+    def convert_to_decimal(self, number_str):
+        # Önce başındaki/sonundaki boşlukları temizleyip küçük harfe çevirelim 
+        # (Böylece '0X', 'H' gibi büyük harf gelirse kod patlamaz)
+        val = number_str.strip().lower()
+
+        try:
+            # 0x ile başlıyorsa (örn: 0x1a)
+            if val.startswith("0x"):
+                return str(int(val, 16))
+                
+            # h ile başlıyorsa (örn: h1a), ilk karakteri (h) atlayıp çeviriyoruz [1:]
+            elif val.startswith("h"):
+                return str(int(val[1:], 16))
+                
+            # h ile bitiyorsa (örn: 1ah), son karakteri (h) atlayıp çeviriyoruz [:-1]
+            elif val.endswith("h"):
+                return str(int(val[:-1], 16))
+                
+            # Hiçbirine uymuyorsa zaten decimal'dir, sadece kontrol amaçlı 10 tabanında çeviriyoruz
+            else:
+                return str(int(val, 10))
+                
+        except ValueError:
+            # Eğer sayıya çevrilemeyen saçma sapan bir veri ("ABC" vb.) gelirse, 
+            # program çökmesin diye veriyi olduğu gibi geri döndürüyoruz.
+            return number_str
+        
 app = QApplication(sys.argv)
 window = TerminalApp()
 window.show()
