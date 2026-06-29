@@ -1,11 +1,14 @@
 import sys
+import os
 import functions
 from datetime import datetime
 from PySide6.QtCore import QCoreApplication, QMetaObject, QRect, QTimer, Qt, QStringListModel, QEvent
 from PySide6.QtGui import QFont, QIcon
 from PySide6.QtWidgets import (QApplication, QComboBox, QHBoxLayout, QLabel, 
                                QLineEdit, QMainWindow, QMenuBar, QPlainTextEdit, 
-                               QPushButton, QSizePolicy, QStatusBar, QWidget, QMessageBox, QVBoxLayout, QSpacerItem, QCompleter, QListWidget, QListWidgetItem)
+                               QPushButton, QSizePolicy, QStatusBar, QWidget, QMessageBox, 
+                               QVBoxLayout, QSpacerItem, QCompleter, QListWidget, QListWidgetItem,
+                               QFileDialog, QRadioButton, QButtonGroup, QFrame)
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 
 class Ui_MainWindow(object):
@@ -193,7 +196,6 @@ class DisplayBarWidget(QWidget):
         self.refresh_display()
 
     def refresh_display(self):
-
         if not self.last_data_list:
             return
 
@@ -232,6 +234,15 @@ class TerminalApp(QMainWindow):
         self.serial_port.readyRead.connect(self.read_serial_data)
 
         self.active_filters = []
+        
+        # --- LOG SYSTEM VARIABLES ---
+        self.log_file = None
+        self.log_folder = ""
+        self.base_log_name = ""
+        self.current_log_index = 0
+        self.log_line_count = 0
+        self.MAX_LOG_LINES = 10000  # 10,000 satırda bir yeni dosyaya geçer (_1, _2 diye)
+        self.is_logging = False
 
         self.top_layout = QHBoxLayout()
         self.top_layout.setContentsMargins(10, 10, 10, 10)
@@ -243,6 +254,7 @@ class TerminalApp(QMainWindow):
         self.top_layout.addWidget(self.ui.start_stop)
         self.top_layout.addWidget(self.ui.Refresh)
 
+        # --- RIGHT PANEL (Filters & Log Menu) ---
         self.right_panel_layout = QVBoxLayout()
         self.filter_list_label = QLabel("Active Filters List", self)
         font_title = QFont()
@@ -254,6 +266,17 @@ class TerminalApp(QMainWindow):
         
         self.right_panel_layout.addWidget(self.filter_list_label)
         self.right_panel_layout.addWidget(self.filter_list_widget)
+        self.right_panel_layout.addStretch()
+
+        # Log Menu Toggle Button
+        self.btn_toggle_log = QPushButton("📂 Log Menu", self)
+        self.btn_toggle_log.setStyleSheet("background-color: #3f51b5; color: white; font-weight: bold; padding: 5px;")
+        self.btn_toggle_log.clicked.connect(self.toggle_log_panel)
+        self.right_panel_layout.addWidget(self.btn_toggle_log)
+
+        # Log Panel (Hidden initially)
+        self.setup_log_panel()
+        self.right_panel_layout.addWidget(self.log_panel)
 
         self.center_layout = QVBoxLayout()
         self.center_layout.addWidget(self.ui.widget)  
@@ -306,6 +329,151 @@ class TerminalApp(QMainWindow):
         self.ui.btn_apply_filter.clicked.connect(self.add_filter) 
         self.ui.btn_clear_filter.clicked.connect(self.clear_filters)
 
+    def setup_log_panel(self):
+        """Log Kontrol Panelinin Arayüzü"""
+        self.log_panel = QFrame(self)
+        self.log_panel.setStyleSheet("QFrame { background-color: #333; border: 1px solid #555; border-radius: 5px; }")
+        self.log_panel.hide()
+        
+        layout = QVBoxLayout(self.log_panel)
+        layout.setContentsMargins(10, 10, 10, 10)
+        
+        # Path Selection
+        path_layout = QHBoxLayout()
+        self.le_log_path = QLineEdit(self)
+        self.le_log_path.setPlaceholderText("Select Log Folder...")
+        self.le_log_path.setReadOnly(True)
+        self.btn_browse_log = QPushButton("...", self)
+        self.btn_browse_log.setFixedWidth(30)
+        self.btn_browse_log.clicked.connect(self.browse_log_folder)
+        path_layout.addWidget(self.le_log_path)
+        path_layout.addWidget(self.btn_browse_log)
+        layout.addLayout(path_layout)
+        
+        # Radio Buttons
+        self.radio_all_logs = QRadioButton("All Logs")
+        self.radio_all_logs.setChecked(True)
+        self.radio_filtered_logs = QRadioButton("Filtered Logs")
+        
+        self.log_mode_group = QButtonGroup(self)
+        self.log_mode_group.addButton(self.radio_all_logs)
+        self.log_mode_group.addButton(self.radio_filtered_logs)
+        
+        radio_layout = QHBoxLayout()
+        radio_layout.addWidget(self.radio_all_logs)
+        radio_layout.addWidget(self.radio_filtered_logs)
+        layout.addLayout(radio_layout)
+        
+        # Control Buttons
+        ctrl_layout = QHBoxLayout()
+        self.btn_log_start_stop = QPushButton("Start", self)
+        self.btn_log_start_stop.setStyleSheet("background-color: #4CAF50; color: white; font-weight: bold;")
+        self.btn_log_start_stop.clicked.connect(self.toggle_logging)
+        
+        self.btn_log_finish = QPushButton("Finish", self)
+        self.btn_log_finish.setStyleSheet("background-color: #f44336; color: white; font-weight: bold;")
+        self.btn_log_finish.clicked.connect(self.finish_logging)
+        self.btn_log_finish.setEnabled(False)
+        
+        ctrl_layout.addWidget(self.btn_log_start_stop)
+        ctrl_layout.addWidget(self.btn_log_finish)
+        layout.addLayout(ctrl_layout)
+
+    def toggle_log_panel(self):
+        if self.log_panel.isHidden():
+            self.log_panel.show()
+            self.btn_toggle_log.setText("📂 Close Log Menu")
+        else:
+            self.log_panel.hide()
+            self.btn_toggle_log.setText("📂 Log Menu")
+
+    def browse_log_folder(self):
+        folder = QFileDialog.getExistingDirectory(self, "Select Directory for Logs")
+        if folder:
+            self.log_folder = folder
+            self.le_log_path.setText(folder)
+
+    def toggle_logging(self):
+        if not self.log_folder:
+            QMessageBox.warning(self, "Warning", "Please select a folder for log files first.")
+            return
+
+        if not self.is_logging:
+            self.is_logging = True
+            self.btn_log_start_stop.setText("Stop")
+            self.btn_log_start_stop.setStyleSheet("background-color: #FF9800; color: white; font-weight: bold;")
+            self.btn_log_finish.setEnabled(True)
+            self.ui.plainTextEdit.appendPlainText(f"--- LOGGING STARTED ---")
+            
+            # İlk defa başlıyorsa ismi yarat
+            if not self.base_log_name:
+                self.base_log_name = f"CS_{datetime.now().strftime('%Y_%m_%d_%H_%M_%S')}"
+                self.current_log_index = 0
+                self.log_line_count = 0
+            
+            self.check_and_open_log_file()
+        else:
+            # Sadece duraklat (append yapmaya devam edebilmek için file'ı kapatmıyoruz, sadece state'i false yapıyoruz)
+            self.is_logging = False
+            self.btn_log_start_stop.setText("Start")
+            self.btn_log_start_stop.setStyleSheet("background-color: #4CAF50; color: white; font-weight: bold;")
+            self.ui.plainTextEdit.appendPlainText(f"--- LOGGING PAUSED ---")
+
+    def check_and_open_log_file(self):
+        if self.log_file is None or self.log_file.closed:
+            filename = f"{self.base_log_name}_{self.current_log_index}.csv"
+            filepath = os.path.join(self.log_folder, filename)
+            
+            is_new_file = not os.path.exists(filepath)
+            self.log_file = open(filepath, 'a', encoding='utf-8')
+            
+            if is_new_file:
+                self.log_file.write("Timestamp,Node ID,MSG ID,Data\n")
+                self.log_file.flush()
+
+    def finish_logging(self):
+        self.is_logging = False
+        self.btn_log_start_stop.setText("Start")
+        self.btn_log_start_stop.setStyleSheet("background-color: #4CAF50; color: white; font-weight: bold;")
+        self.btn_log_finish.setEnabled(False)
+        
+        if self.log_file and not self.log_file.closed:
+            self.log_file.close()
+            
+        self.ui.plainTextEdit.appendPlainText(f"--- LOGGING FINISHED (Saved as {self.base_log_name}_{self.current_log_index}.csv) ---")
+        
+        # Bir dahaki Start'a yeni dosya oluşması için base name'i sıfırlıyoruz
+        self.base_log_name = ""
+        self.current_log_index = 0
+        self.log_line_count = 0
+
+    def write_to_log(self, node_id, msg_id, data_list, is_filtered_out):
+        if not self.is_logging:
+            return
+            
+        # Eğer Filtered seçiliyse ve veri filtreden geçemediyse loglama
+        if self.radio_filtered_logs.isChecked() and is_filtered_out:
+            return
+
+        self.check_and_open_log_file()
+        
+        timestamp = datetime.now().strftime('%H:%M:%S:%f')[:-3]
+        data_str = ",".join(data_list) if data_list else "NO DATA"
+        
+        log_line = f"{timestamp},{node_id},{msg_id},{data_str}\n"
+        self.log_file.write(log_line)
+        self.log_file.flush() # Veri kaybı yaşamamak için hemen yazdır
+        
+        self.log_line_count += 1
+        
+        # Sınır aşılırsa yeni dosyaya geç (Rollover)
+        if self.log_line_count >= self.MAX_LOG_LINES:
+            self.log_file.close()
+            self.current_log_index += 1
+            self.log_line_count = 0
+            self.check_and_open_log_file()
+
+    # --- GERİ KALAN MEVCUT FONKSİYONLAR ---
     def eventFilter(self, obj, event):
         if event.type() == QEvent.MouseButtonPress:
             if obj == self.ui.le_node_id:
@@ -475,10 +643,10 @@ class TerminalApp(QMainWindow):
         current_msg_id = self.convert_to_decimal(parts[2])
 
         doesDataExist = length >= 5
-
         data_list = parts[3:-1] if doesDataExist else []
-
         data_str = ", ".join(data_list) if doesDataExist else "NO DATA"
+
+        is_filtered_out = False
 
         if self.active_filters:
             match_found = False
@@ -498,7 +666,14 @@ class TerminalApp(QMainWindow):
                     f_obj['display_bar'].update_live_data(data_list)
 
             if has_enabled_filter and not match_found:
-                return
+                is_filtered_out = True
+
+        # --- LOG YAZMA KISMI (Terminal'e basılsın veya basılmasın log sistemine gönderiyoruz) ---
+        self.write_to_log(current_node_id, current_msg_id, data_list, is_filtered_out)
+
+        # UI'a yazdırılıp yazdırılmayacağına karar ver
+        if is_filtered_out:
+            return
 
         if doesDataExist:
             data_status = f"DATA: {data_str}"
@@ -514,20 +689,18 @@ class TerminalApp(QMainWindow):
         try:
             if val.startswith("0x"):
                 return str(int(val, 16))
-
             elif val.startswith("h"):
                 return str(int(val[1:], 16))
-
             elif val.endswith("h"):
                 return str(int(val[:-1], 16))
-            
             else:
                 return str(int(val, 10))
                 
         except ValueError:
             return number_str
         
-app = QApplication(sys.argv)
-window = TerminalApp()
-window.show()
-sys.exit(app.exec())
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    window = TerminalApp()
+    window.show()
+    sys.exit(app.exec())
