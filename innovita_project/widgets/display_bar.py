@@ -93,11 +93,11 @@ class DisplayBarWidget(QWidget):
                 if selected_function == "gaugemeter":
                     self.gauge.set_value(val_float / 1000.0) 
                 elif selected_function == "speedometer":
-                    self.speedometer.set_value(val_float)
+                    self.speedometer.set_value(val_float * 0.005)
                 elif selected_function == "altitudebar":
                     self.altimeter.set_altitude(val_float)
                 elif selected_function == "thermometer":
-                    self.thermometer.set_temperature(val_float)
+                    self.thermometer.set_temperature(val_float * 0.005 - 10)
 
                 self.label_data.setText(val_str)
             except (ValueError, TypeError):
